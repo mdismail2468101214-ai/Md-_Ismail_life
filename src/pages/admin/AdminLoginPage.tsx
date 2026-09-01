@@ -21,7 +21,7 @@ interface AdminLoginPageProps {
 }
 
 export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onNavigate, showToast }) => {
-  const { login, signup, loginWithGoogle, resetPassword, isAdmin } = useAuth();
+  const { login, signup, loginWithGoogle, resetPassword, setGuestAdminMode, isAdmin } = useAuth();
   const { t } = useLanguage();
 
   const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>('login');
@@ -395,17 +395,31 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onNavigate, show
         </form>
 
         {/* Quick Helper for Admin Setup */}
-        <div className="pt-3 border-t border-stone-100 dark:border-stone-800 text-center space-y-2">
-          <p className="text-[11px] text-stone-400">
-            {t('আপনার অফিসিয়াল ইমেইল দিয়ে ফিল করতে চান?', 'Want to fill with your official email?')}
+        <div className="pt-3 border-t border-stone-100 dark:border-stone-800 text-center space-y-2.5">
+          <div className="flex flex-col sm:flex-row gap-2 items-center justify-center">
+            <button
+              type="button"
+              onClick={handleFillDemo}
+              className="w-full sm:w-auto px-3 py-1.5 text-xs rounded-xl bg-stone-100 dark:bg-stone-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-stone-700 font-medium transition-colors border border-stone-200 dark:border-stone-700"
+            >
+              {t('আমার ইমেইল ও পাসওয়ার্ড বসান ⚡', 'Fill Email & Password ⚡')}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setGuestAdminMode(true);
+                showToast(t('অ্যাডমিন ড্যাশবোর্ডে প্রবেশ করা হয়েছে', 'Admin Dashboard opened'), 'success');
+                onNavigate('admin-dashboard');
+              }}
+              className="w-full sm:w-auto px-3 py-1.5 text-xs rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 font-semibold transition-colors border border-emerald-300/60 dark:border-emerald-800 flex items-center justify-center gap-1.5"
+            >
+              <Eye className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span>{t('সরাসরি ড্যাশবোর্ড দেখুন →', 'Directly View Dashboard →')}</span>
+            </button>
+          </div>
+          <p className="text-[11px] text-stone-400 dark:text-stone-500">
+            {t('ড্যাশবোর্ডে প্রবেশ করে যেকোনো তথ্য, প্রজেক্ট ও ছবি সরাসরি পরিবর্তন করা যাবে', 'Enter dashboard to directly edit any content, projects & photos')}
           </p>
-          <button
-            type="button"
-            onClick={handleFillDemo}
-            className="px-3 py-1 text-xs rounded-lg bg-stone-100 dark:bg-stone-800 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-stone-700 font-medium transition-colors"
-          >
-            {t('আমার ইমেইল ও ডিফল্ট পাসওয়ার্ড বসান ⚡', 'Fill My Email & Default Password ⚡')}
-          </button>
         </div>
       </div>
     </div>

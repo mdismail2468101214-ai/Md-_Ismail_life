@@ -89,13 +89,24 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
         c.toolsUsed.some(tool => tool.toLowerCase().includes(q))
     );
 
+    const isSearchingAdmin =
+      q.includes('admin') ||
+      q.includes('এডমিন') ||
+      q.includes('লগইন') ||
+      q.includes('login') ||
+      q.includes('dashboard') ||
+      q.includes('ড্যাশবোর্ড') ||
+      q.includes('panel') ||
+      q.includes('প্যানেল');
+
     const totalMatches =
       matchedProjects.length +
       matchedBlogs.length +
       matchedStory.length +
       matchedGallery.length +
       matchedVideos.length +
-      matchedCreations.length;
+      matchedCreations.length +
+      (isSearchingAdmin ? 1 : 0);
 
     return {
       projects: matchedProjects,
@@ -104,6 +115,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
       gallery: matchedGallery,
       videos: matchedVideos,
       creations: matchedCreations,
+      isSearchingAdmin,
       totalMatches
     };
   }, [query, projects, blogPosts, lifeStory, gallery, videos, creations]);
@@ -156,10 +168,10 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
           {/* Search Results Area */}
           <div className="max-h-[60vh] overflow-y-auto p-4 space-y-4">
             {!query.trim() ? (
-              <div className="text-center py-10 text-stone-400 dark:text-stone-500 text-sm">
+              <div className="text-center py-8 text-stone-400 dark:text-stone-500 text-sm">
                 <p className="mb-2">💡 {t('টাইপ করে খুঁজুন:', 'Quick Search Tips:')}</p>
                 <div className="flex flex-wrap justify-center gap-2 mt-3">
-                  {['React', 'Quran', 'ক্যাম্পাস', 'জ্যামিতি', 'SSC', 'সঞ্চয়'].map((tag) => (
+                  {['React', 'Quran', 'ক্যাম্পাস', 'জ্যামিতি', 'SSC', 'সঞ্চয়', 'অ্যাডমিন'].map((tag) => (
                     <button
                       key={tag}
                       onClick={() => setQuery(tag)}
@@ -176,6 +188,29 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
               </div>
             ) : searchResults ? (
               <div className="space-y-6">
+                {/* Admin Portal Result if matched */}
+                {searchResults.isSearchingAdmin && (
+                  <div>
+                    <h4 className="text-xs font-semibold text-stone-400 dark:text-stone-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                      {t('সিস্টেম ও অ্যাডমিন', 'System & Admin')}
+                    </h4>
+                    <div
+                      onClick={() => handleSelect('admin-dashboard')}
+                      className="p-3 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100/70 dark:hover:bg-emerald-900/60 cursor-pointer flex items-center justify-between transition-colors group"
+                    >
+                      <div>
+                        <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300 group-hover:underline flex items-center gap-1.5">
+                          <span>🛡️ {t('অ্যাডমিন কন্ট্রোল সেন্টার / ড্যাশবোর্ড', 'Admin Control Center / Dashboard')}</span>
+                        </p>
+                        <p className="text-xs text-stone-600 dark:text-stone-400">
+                          {t('সব তথ্য, ছবি, প্রজেক্ট, ভিডিও, ব্লগ ও সেটিংস এডিট করার জন্য ড্যাশবোর্ডে প্রবেশ করুন', 'Access admin control center to edit all content, photos, projects and blogs')}
+                        </p>
+                      </div>
+                      <ArrowRight className="w-4 h-4 text-emerald-600 dark:text-emerald-400 group-hover:translate-x-0.5 transition-transform" />
+                    </div>
+                  </div>
+                )}
                 {/* Projects */}
                 {searchResults.projects.length > 0 && (
                   <div>

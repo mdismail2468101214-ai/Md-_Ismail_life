@@ -212,20 +212,22 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, onNavigate, onOpen
               )}
             </button>
 
-            {/* Admin Dashboard button - only shown when logged in as admin */}
-            {isAdmin && (
-              <button
-                id="admin-nav-btn"
-                onClick={() => handleItemClick('admin-dashboard')}
-                className="px-2.5 py-1 rounded-xl bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 font-semibold text-xs transition-colors flex items-center gap-1.5 border border-emerald-300/60 dark:border-emerald-800"
-                title={t('অ্যাডমিন ড্যাশবোর্ড', 'Admin Dashboard')}
-              >
-                <ShieldAlert className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                <span className="hidden sm:inline">
-                  {t('অ্যাডমিন প্যানেল', 'Admin')}
-                </span>
-              </button>
-            )}
+            {/* Admin Panel button */}
+            <button
+              id="admin-nav-btn"
+              onClick={() => handleItemClick(isAdmin ? 'admin-dashboard' : 'admin-login')}
+              className={`px-2.5 py-1 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 border ${
+                isAdmin
+                  ? 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 border-emerald-300/60 dark:border-emerald-800'
+                  : 'bg-stone-100 dark:bg-stone-800/80 text-stone-700 dark:text-stone-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:text-emerald-700 dark:hover:text-emerald-300 border-stone-200 dark:border-stone-700'
+              }`}
+              title={isAdmin ? t('অ্যাডমিন ড্যাশবোর্ড', 'Admin Dashboard') : t('অ্যাডমিন প্যানেল প্রবেশ', 'Admin Portal Access')}
+            >
+              <ShieldAlert className={`w-3.5 h-3.5 ${isAdmin ? 'text-emerald-600 dark:text-emerald-400' : 'text-emerald-600 dark:text-emerald-400'}`} />
+              <span className="hidden sm:inline">
+                {isAdmin ? t('অ্যাডমিন', 'Admin') : t('অ্যাডমিন', 'Admin')}
+              </span>
+            </button>
 
             {/* Mobile Menu Button */}
             <button
@@ -259,20 +261,22 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, onNavigate, onOpen
             ))}
           </div>
 
-          {isAdmin && (
-            <div className="pt-3 flex items-center justify-between text-xs text-stone-600 dark:text-stone-300">
-              <span className="flex items-center gap-1 font-medium text-emerald-600 dark:text-emerald-400">
-                <ShieldAlert className="w-4 h-4" />
-                {t('অ্যাডমিন মোড সক্রিয়', 'Admin Mode Active')}
-              </span>
-              <button
-                onClick={() => handleItemClick('admin-dashboard')}
-                className="px-3 py-1 rounded-lg bg-emerald-600 text-white font-semibold shadow-xs"
-              >
-                {t('ড্যাশবোর্ড খুলুন →', 'Open Dashboard →')}
-              </button>
-            </div>
-          )}
+          <div className="pt-3 flex items-center justify-between text-xs text-stone-600 dark:text-stone-300">
+            <span className="flex items-center gap-1.5 font-medium text-stone-600 dark:text-stone-400">
+              <ShieldAlert className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              {isAdmin ? t('অ্যাডমিন মোড সক্রিয়', 'Admin Mode Active') : t('সাইট অ্যাডমিনিস্ট্রেশন', 'Site Administration')}
+            </span>
+            <button
+              onClick={() => handleItemClick(isAdmin ? 'admin-dashboard' : 'admin-login')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold shadow-xs transition-colors ${
+                isAdmin
+                  ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                  : 'bg-stone-100 dark:bg-stone-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-stone-700 border border-stone-200 dark:border-stone-700'
+              }`}
+            >
+              {isAdmin ? t('ড্যাশবোর্ড খুলুন →', 'Open Dashboard →') : t('অ্যাডমিন পোর্টাল →', 'Admin Portal →')}
+            </button>
+          </div>
         </div>
       )}
     </header>

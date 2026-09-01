@@ -244,17 +244,15 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                   {t('ভবিষ্যৎ লক্ষ্য', 'Future Milestones')}
                 </button>
               </li>
-              {isAdmin && (
-                <li className="pt-2">
-                  <button
-                    onClick={() => onNavigate('admin-dashboard')}
-                    className="inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-semibold hover:underline"
-                  >
-                    <ShieldAlert className="w-3.5 h-3.5" />
-                    <span>{t('অ্যাডমিন ড্যাশবোর্ড', 'Admin Dashboard')}</span>
-                  </button>
-                </li>
-              )}
+              <li className="pt-2">
+                <button
+                  onClick={() => onNavigate(isAdmin ? 'admin-dashboard' : 'admin-login')}
+                  className="inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-semibold hover:underline"
+                >
+                  <ShieldAlert className="w-3.5 h-3.5" />
+                  <span>{isAdmin ? t('অ্যাডমিন ড্যাশবোর্ড', 'Admin Dashboard') : t('অ্যাডমিন পোর্টাল', 'Admin Portal')}</span>
+                </button>
+              </li>
             </ul>
           </div>
         </div>

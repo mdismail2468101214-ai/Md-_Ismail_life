@@ -72,6 +72,12 @@ function MainAppContent() {
       } else if (cleanHash.startsWith('blog/')) {
         setCurrentRoute('blog-post');
         setRouteParam(cleanHash.replace('blog/', ''));
+      } else if (cleanHash === 'admin' || cleanHash === 'dashboard' || cleanHash === 'admin-panel') {
+        setCurrentRoute('admin-dashboard');
+        setRouteParam(undefined);
+      } else if (cleanHash === 'login' || cleanHash === 'admin-login') {
+        setCurrentRoute('admin-login');
+        setRouteParam(undefined);
       } else {
         setCurrentRoute(cleanHash);
         setRouteParam(undefined);
@@ -211,13 +217,13 @@ function MainAppContent() {
             showToast={showToast}
           />
         )}
-        {currentRoute === 'admin-login' && (
+        {(currentRoute === 'admin-login' || currentRoute === 'login') && (
           <AdminLoginPage
             onNavigate={handleNavigate}
             showToast={showToast}
           />
         )}
-        {currentRoute === 'admin-dashboard' && (
+        {(currentRoute === 'admin-dashboard' || currentRoute === 'admin' || currentRoute === 'dashboard' || currentRoute === 'admin-panel') && (
           <AdminDashboardPage
             onNavigate={handleNavigate}
             showToast={showToast}

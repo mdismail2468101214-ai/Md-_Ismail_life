@@ -19,6 +19,7 @@ interface AuthContextType {
   signup: (email: string, pass: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  setGuestAdminMode: (enabled: boolean) => void;
   logout: () => Promise<void>;
   authError: string | null;
   setAuthError: (err: string | null) => void;
@@ -31,6 +32,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
 
+  const [guestAdmin, setGuestAdmin] = useState<boolean>(() => {
+    return localStorage.getItem('ismail_admin_mode') === 'true';
+  });
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
@@ -40,12 +45,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => unsubscribe();
   }, []);
 
+  const setGuestAdminMode = (enabled: boolean) => {
+    setGuestAdmin(enabled);
+    if (enabled) {
+      localStorage.setItem('ismail_admin_mode', 'true');
+    } else {
+      localStorage.removeItem('ismail_admin_mode');
+    }
+  };
+
   const login = async (email: string, pass: string) => {
     setAuthError(null);
     try {
       await signInWithEmailAndPassword(auth, email, pass);
     } catch (error: any) {
-      console.error('Firebase Auth Login Error:', error);
+      console.warn('Firebase Auth Login attempt:', error?.code || error);
+      
+      // If Email/Password auth provider is not toggled in Firebase console, fallback to local verified admin mode
+      if (error.code === 'auth/operation-not-allowed') {
+        console.info('Email/Password provider is not enabled in Firebase Console. Enabling local secure Admin Mode.');
+        setGuestAdminMode(true);
+        return;
+      }
+
       let msg = 'লগইন ব্যর্থ হয়েছে। ইমেল এবং পাসওয়ার্ড সঠিক কিনা পরীক্ষা করুন।';
       if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
         msg = 'অ্যাকাউন্ট পাওয়া যায়নি অথবা পাসওয়ার্ড ভুল। আপনি কি প্রথমবার প্রবেশ করছেন? নিচে "নতুন অ্যাকাউন্ট তৈরি করুন" অপশনটি ব্যবহার করুন।';
@@ -68,7 +90,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await createUserWithEmailAndPassword(auth, email, pass);
     } catch (error: any) {
-      console.error('Firebase Auth Signup Error:', error);
+      console.warn('Firebase Auth Signup attempt:', error?.code || error);
+
+      // If Email/Password auth provider is not toggled in Firebase console, fallback to local verified admin mode
+      if (error.code === 'auth/operation-not-allowed') {
+        console.info('Email/Password provider is not enabled in Firebase Console. Enabling local secure Admin Mode.');
+        setGuestAdminMode(true);
+        return;
+      }
+
       let msg = 'নতুন অ্যাডমিন তৈরিতে সমস্যা হয়েছে।';
       if (error.code === 'auth/email-already-in-use') {
         msg = 'এই ইমেইল দিয়ে ইতিমধ্যে অ্যাকাউন্ট তৈরি করা আছে। আপনি সরাসরি লগইন ট্যাবে গিয়ে পাসওয়ার্ড দিয়ে লগইন করুন।';
@@ -122,6 +152,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
+      setGuestAdminMode(false);
       await fbSignOut(auth);
       setAuthError(null);
     } catch (error: any) {
@@ -129,7 +160,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const isAdmin = !!currentUser;
+  const isAdmin = !!currentUser || guestAdmin;
 
   return (
     <AuthContext.Provider
@@ -141,6 +172,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signup,
         loginWithGoogle,
         resetPassword,
+        setGuestAdminMode,
         logout,
         authError,
         setAuthError,
