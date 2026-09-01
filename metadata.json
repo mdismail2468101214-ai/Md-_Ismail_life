@@ -1,0 +1,6 @@
+{
+  "name": "আমার গল্প | My Journey",
+  "description": "Personal digital life book, portfolio, timeline, gallery, thoughts, and accomplishments.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
