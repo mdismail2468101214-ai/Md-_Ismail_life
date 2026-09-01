@@ -212,22 +212,20 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, onNavigate, onOpen
               )}
             </button>
 
-            {/* Admin Dashboard shortcut button */}
-            <button
-              id="admin-nav-btn"
-              onClick={() => handleItemClick(isAdmin ? 'admin-dashboard' : 'admin-login')}
-              className={`p-2 rounded-xl transition-colors flex items-center gap-1.5 ${
-                isAdmin
-                  ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-semibold'
-                  : 'text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 hover:text-stone-900 dark:hover:text-white'
-              }`}
-              title={isAdmin ? t('অ্যাডমিন ড্যাশবোর্ড', 'Admin Dashboard') : t('অ্যাডমিন লগইন', 'Admin Login')}
-            >
-              <ShieldAlert className="w-4 h-4" />
-              <span className="hidden md:inline text-xs font-medium">
-                {isAdmin ? t('অ্যাডমিন', 'Admin') : t('লগইন', 'Login')}
-              </span>
-            </button>
+            {/* Admin Dashboard button - only shown when logged in as admin */}
+            {isAdmin && (
+              <button
+                id="admin-nav-btn"
+                onClick={() => handleItemClick('admin-dashboard')}
+                className="px-2.5 py-1 rounded-xl bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 font-semibold text-xs transition-colors flex items-center gap-1.5 border border-emerald-300/60 dark:border-emerald-800"
+                title={t('অ্যাডমিন ড্যাশবোর্ড', 'Admin Dashboard')}
+              >
+                <ShieldAlert className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span className="hidden sm:inline">
+                  {t('অ্যাডমিন প্যানেল', 'Admin')}
+                </span>
+              </button>
+            )}
 
             {/* Mobile Menu Button */}
             <button
@@ -261,15 +259,20 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, onNavigate, onOpen
             ))}
           </div>
 
-          <div className="pt-3 flex items-center justify-between text-xs text-stone-500 dark:text-stone-400">
-            <span>{t('লগইন স্ট্যাটাস:', 'Auth Status:')} {isAdmin ? '✅ Logged In' : 'Visitor'}</span>
-            <button
-              onClick={() => handleItemClick(isAdmin ? 'admin-dashboard' : 'admin-login')}
-              className="text-emerald-600 dark:text-emerald-400 font-semibold"
-            >
-              {isAdmin ? t('অ্যাডমিন ড্যাশবোর্ড খুলুন →', 'Open Admin →') : t('অ্যাডমিন লগইন →', 'Admin Login →')}
-            </button>
-          </div>
+          {isAdmin && (
+            <div className="pt-3 flex items-center justify-between text-xs text-stone-600 dark:text-stone-300">
+              <span className="flex items-center gap-1 font-medium text-emerald-600 dark:text-emerald-400">
+                <ShieldAlert className="w-4 h-4" />
+                {t('অ্যাডমিন মোড সক্রিয়', 'Admin Mode Active')}
+              </span>
+              <button
+                onClick={() => handleItemClick('admin-dashboard')}
+                className="px-3 py-1 rounded-lg bg-emerald-600 text-white font-semibold shadow-xs"
+              >
+                {t('ড্যাশবোর্ড খুলুন →', 'Open Dashboard →')}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </header>

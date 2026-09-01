@@ -81,9 +81,24 @@ function MainAppContent() {
     handleHash();
     window.addEventListener('popstate', handleHash);
     window.addEventListener('hashchange', handleHash);
+
+    // Global keyboard shortcuts (Ctrl+K for search, Ctrl+Shift+A for admin)
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setSearchOpen((prev) => !prev);
+      } else if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'a') {
+        e.preventDefault();
+        handleNavigate('admin-login');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
     return () => {
       window.removeEventListener('popstate', handleHash);
       window.removeEventListener('hashchange', handleHash);
+      window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
 

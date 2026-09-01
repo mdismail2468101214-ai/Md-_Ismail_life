@@ -4,7 +4,10 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut as fbSignOut,
-  onAuthStateChanged
+  onAuthStateChanged,
+  signInWithPopup,
+  GoogleAuthProvider,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { auth } from '../firebase/config';
 
@@ -14,6 +17,8 @@ interface AuthContextType {
   isAdmin: boolean;
   login: (email: string, pass: string) => Promise<void>;
   signup: (email: string, pass: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
   logout: () => Promise<void>;
   authError: string | null;
   setAuthError: (err: string | null) => void;
@@ -43,16 +48,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Firebase Auth Login Error:', error);
       let msg = 'লগইন ব্যর্থ হয়েছে। ইমেল এবং পাসওয়ার্ড সঠিক কিনা পরীক্ষা করুন।';
       if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
-        msg = 'ভুল ইমেইল অথবা পাসওয়ার্ড।';
+        msg = 'অ্যাকাউন্ট পাওয়া যায়নি অথবা পাসওয়ার্ড ভুল। আপনি কি প্রথমবার প্রবেশ করছেন? নিচে "নতুন অ্যাকাউন্ট তৈরি করুন" অপশনটি ব্যবহার করুন।';
       } else if (error.code === 'auth/wrong-password') {
-        msg = 'পাসওয়ার্ড সঠিক নয়।';
+        msg = 'পাসওয়ার্ড সঠিক নয়। অনুগ্রহ করে পুনরায় চেষ্টা করুন বা পাসওয়ার্ড রিসেট করুন।';
       } else if (error.code === 'auth/too-many-requests') {
         msg = 'অতিরিক্ত ব্যর্থ চেষ্টার কারণে সাময়িকভাবে ব্লক করা হয়েছে। কিছুক্ষণ পর চেষ্টা করুন।';
+      } else if (error.code === 'auth/invalid-email') {
+        msg = 'সঠিক ফরম্যাটের ইমেইল অ্যাড্রেস প্রদান করুন।';
       } else if (error.message) {
         msg = error.message;
       }
       setAuthError(msg);
-      throw error;
+      throw new Error(msg);
     }
   };
 
@@ -64,14 +71,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Firebase Auth Signup Error:', error);
       let msg = 'নতুন অ্যাডমিন তৈরিতে সমস্যা হয়েছে।';
       if (error.code === 'auth/email-already-in-use') {
-        msg = 'এই ইমেইলটি ইতিমধ্যে ব্যবহৃত হয়েছে। লগইন করার চেষ্টা করুন।';
+        msg = 'এই ইমেইল দিয়ে ইতিমধ্যে অ্যাকাউন্ট তৈরি করা আছে। আপনি সরাসরি লগইন ট্যাবে গিয়ে পাসওয়ার্ড দিয়ে লগইন করুন।';
       } else if (error.code === 'auth/weak-password') {
-        msg = 'পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।';
+        msg = 'পাসওয়ার্ড অত্যন্ত দুর্বল। কমপক্ষে ৬ অক্ষরের শক্তিশালী পাসওয়ার্ড দিন।';
+      } else if (error.code === 'auth/invalid-email') {
+        msg = 'সঠিক ফরম্যাটের ইমেইল দিন।';
       } else if (error.message) {
         msg = error.message;
       }
       setAuthError(msg);
-      throw error;
+      throw new Error(msg);
+    }
+  };
+
+  const loginWithGoogle = async () => {
+    setAuthError(null);
+    try {
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      await signInWithPopup(auth, provider);
+    } catch (error: any) {
+      console.error('Firebase Google Auth Error:', error);
+      let msg = 'গুগল দিয়ে লগইন ব্যর্থ হয়েছে।';
+      if (error.code === 'auth/popup-closed-by-user') {
+        msg = 'পপআপ উইন্ডোটি বন্ধ করে দেওয়া হয়েছে। আবার চেষ্টা করুন।';
+      } else if (error.message) {
+        msg = error.message;
+      }
+      setAuthError(msg);
+      throw new Error(msg);
+    }
+  };
+
+  const resetPassword = async (email: string) => {
+    setAuthError(null);
+    try {
+      await sendPasswordResetEmail(auth, email);
+    } catch (error: any) {
+      console.error('Password reset error:', error);
+      let msg = 'পাসওয়ার্ড রিসেট ইমেইল পাঠাতে সমস্যা হয়েছে।';
+      if (error.code === 'auth/user-not-found') {
+        msg = 'এই ইমেইলের কোনো অ্যাকাউন্ট পাওয়া যায়নি।';
+      } else if (error.message) {
+        msg = error.message;
+      }
+      setAuthError(msg);
+      throw new Error(msg);
     }
   };
 
@@ -94,6 +139,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAdmin,
         login,
         signup,
+        loginWithGoogle,
+        resetPassword,
         logout,
         authError,
         setAuthError,
