@@ -1,21 +1,42 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import {defineConfig} from 'vite';
+import fs from 'fs';
+import { defineConfig, Plugin } from 'vite';
 
-export default defineConfig(() => {
+// Plugin to automatically copy index.html to 404.html for GitHub Pages SPA routing fallback
+function copyIndexTo404Plugin(): Plugin {
   return {
-    plugins: [react(), tailwindcss()],
+    name: 'copy-index-to-404',
+    closeBundle() {
+      try {
+        const distPath = path.resolve(__dirname, 'dist');
+        const indexPath = path.join(distPath, 'index.html');
+        const notFoundPath = path.join(distPath, '404.html');
+        if (fs.existsSync(indexPath)) {
+          fs.copyFileSync(indexPath, notFoundPath);
+        }
+      } catch (err) {
+        console.warn('Could not copy index.html to 404.html:', err);
+      }
+    },
+  };
+}
+
+export default defineConfig(({ command }) => {
+  return {
+    base: process.env.VITE_BASE_PATH || (process.env.NODE_ENV === 'production' || command === 'build' ? '/Md-_Ismail_life/' : '/'),
+    plugins: [react(), tailwindcss(), copyIndexTo404Plugin()],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
       },
     },
+    build: {
+      outDir: 'dist',
+    },
     server: {
-      // HMR is disabled in AI Studio via DISABLE_HMR env var.
-      // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
-      // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
     },
   };

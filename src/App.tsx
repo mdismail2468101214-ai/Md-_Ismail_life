@@ -64,22 +64,27 @@ function MainAppContent() {
   // Handle URL hash changes & back/forward buttons
   useEffect(() => {
     const handleHash = () => {
-      const hash = window.location.hash.replace('#/', '').replace('#', '');
-      if (!hash || hash === '') {
+      const rawHash = window.location.hash || '';
+      const cleanHash = rawHash.replace(/^#\/?/, '').split('?')[0].trim();
+      if (!cleanHash || cleanHash === '') {
         setCurrentRoute('home');
         setRouteParam(undefined);
-      } else if (hash.startsWith('blog/')) {
+      } else if (cleanHash.startsWith('blog/')) {
         setCurrentRoute('blog-post');
-        setRouteParam(hash.replace('blog/', ''));
+        setRouteParam(cleanHash.replace('blog/', ''));
       } else {
-        setCurrentRoute(hash);
+        setCurrentRoute(cleanHash);
         setRouteParam(undefined);
       }
     };
 
     handleHash();
     window.addEventListener('popstate', handleHash);
-    return () => window.removeEventListener('popstate', handleHash);
+    window.addEventListener('hashchange', handleHash);
+    return () => {
+      window.removeEventListener('popstate', handleHash);
+      window.removeEventListener('hashchange', handleHash);
+    };
   }, []);
 
   const handleNavigate = (route: string, param?: string) => {
@@ -87,12 +92,17 @@ function MainAppContent() {
     setRouteParam(param);
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
+    let targetHash = '#/';
     if (route === 'home') {
-      window.history.pushState(null, '', '#/');
+      targetHash = '#/';
     } else if (route === 'blog-post' && param) {
-      window.history.pushState(null, '', `#/blog/${param}`);
+      targetHash = `#/blog/${param}`;
     } else {
-      window.history.pushState(null, '', `#/${route}`);
+      targetHash = `#/${route}`;
+    }
+
+    if (window.location.hash !== targetHash) {
+      window.location.hash = targetHash;
     }
   };
 
