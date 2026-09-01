@@ -23,9 +23,9 @@ function copyIndexTo404Plugin(): Plugin {
   };
 }
 
-export default defineConfig(({ command }) => {
+export default defineConfig(() => {
   return {
-    base: process.env.VITE_BASE_PATH || (process.env.NODE_ENV === 'production' || command === 'build' ? '/Md-_Ismail_life/' : '/'),
+    base: process.env.VITE_BASE_PATH || './',
     plugins: [react(), tailwindcss(), copyIndexTo404Plugin()],
     resolve: {
       alias: {
