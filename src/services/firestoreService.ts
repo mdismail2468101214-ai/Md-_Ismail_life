@@ -60,11 +60,37 @@ export const COLLECTIONS = {
   CONTACT_MESSAGES: 'contact_messages',
 } as const;
 
-// Helper to convert Firestore Snapshot to Typed Array
+// Helper to remove undefined fields which Firestore rejects
+export function sanitizeForFirestore<T extends Record<string, any>>(obj: T): T {
+  const clean: any = {};
+  Object.keys(obj).forEach((key) => {
+    const val = obj[key];
+    if (val !== undefined) {
+      if (val !== null && typeof val === 'object' && !Array.isArray(val) && !(val instanceof Date)) {
+        clean[key] = sanitizeForFirestore(val);
+      } else {
+        clean[key] = val;
+      }
+    }
+  });
+  return clean as T;
+}
+
+// Helper to convert Firestore Snapshot to Typed Array and sort safely
 function snapshotToData<T>(snapshot: any): T[] {
   const list: T[] = [];
   snapshot.forEach((docItem: any) => {
     list.push({ id: docItem.id, ...docItem.data() } as T);
+  });
+  // In-memory sort by order ascending if available, then createdAt
+  list.sort((a: any, b: any) => {
+    if (a.order !== undefined && b.order !== undefined && a.order !== b.order) {
+      return Number(a.order) - Number(b.order);
+    }
+    if (a.createdAt && b.createdAt) {
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    }
+    return 0;
   });
   return list;
 }
@@ -115,9 +141,9 @@ export async function updateProfile(data: Partial<Profile>): Promise<void> {
 // LIFE STORY
 // ---------------------------------------------
 export function subscribeLifeStory(callback: (items: LifeStory[]) => void) {
-  const q = query(collection(db, COLLECTIONS.LIFE_STORY), orderBy('order', 'asc'));
+  const colRef = collection(db, COLLECTIONS.LIFE_STORY);
   return onSnapshot(
-    q,
+    colRef,
     (snap) => {
       if (snap.empty) {
         callback(INITIAL_LIFE_STORY);
@@ -134,16 +160,20 @@ export function subscribeLifeStory(callback: (items: LifeStory[]) => void) {
 
 export async function addLifeStory(item: Omit<LifeStory, 'id'>): Promise<string> {
   const colRef = collection(db, COLLECTIONS.LIFE_STORY);
-  const docRef = await addDoc(colRef, {
+  const clean = sanitizeForFirestore({
     ...item,
-    createdAt: new Date().toISOString()
+    order: (item as any).order ?? Date.now(),
+    createdAt: (item as any).createdAt || new Date().toISOString()
   });
+  const docRef = await addDoc(colRef, clean);
   return docRef.id;
 }
 
 export async function updateLifeStory(id: string, item: Partial<LifeStory>): Promise<void> {
   const docRef = doc(db, COLLECTIONS.LIFE_STORY, id);
-  await updateDoc(docRef, item);
+  const clean = sanitizeForFirestore(item);
+  delete (clean as any).id;
+  await setDoc(docRef, clean, { merge: true });
 }
 
 export async function deleteLifeStory(id: string): Promise<void> {
@@ -155,9 +185,9 @@ export async function deleteLifeStory(id: string): Promise<void> {
 // EDUCATION
 // ---------------------------------------------
 export function subscribeEducation(callback: (items: Education[]) => void) {
-  const q = query(collection(db, COLLECTIONS.EDUCATION), orderBy('order', 'asc'));
+  const colRef = collection(db, COLLECTIONS.EDUCATION);
   return onSnapshot(
-    q,
+    colRef,
     (snap) => {
       if (snap.empty) {
         callback(INITIAL_EDUCATION);
@@ -174,16 +204,20 @@ export function subscribeEducation(callback: (items: Education[]) => void) {
 
 export async function addEducation(item: Omit<Education, 'id'>): Promise<string> {
   const colRef = collection(db, COLLECTIONS.EDUCATION);
-  const docRef = await addDoc(colRef, {
+  const clean = sanitizeForFirestore({
     ...item,
-    createdAt: new Date().toISOString()
+    order: (item as any).order ?? Date.now(),
+    createdAt: (item as any).createdAt || new Date().toISOString()
   });
+  const docRef = await addDoc(colRef, clean);
   return docRef.id;
 }
 
 export async function updateEducation(id: string, item: Partial<Education>): Promise<void> {
   const docRef = doc(db, COLLECTIONS.EDUCATION, id);
-  await updateDoc(docRef, item);
+  const clean = sanitizeForFirestore(item);
+  delete (clean as any).id;
+  await setDoc(docRef, clean, { merge: true });
 }
 
 export async function deleteEducation(id: string): Promise<void> {
@@ -195,9 +229,9 @@ export async function deleteEducation(id: string): Promise<void> {
 // PROJECTS
 // ---------------------------------------------
 export function subscribeProjects(callback: (items: Project[]) => void) {
-  const q = query(collection(db, COLLECTIONS.PROJECTS), orderBy('order', 'asc'));
+  const colRef = collection(db, COLLECTIONS.PROJECTS);
   return onSnapshot(
-    q,
+    colRef,
     (snap) => {
       if (snap.empty) {
         callback(INITIAL_PROJECTS);
@@ -214,16 +248,20 @@ export function subscribeProjects(callback: (items: Project[]) => void) {
 
 export async function addProject(item: Omit<Project, 'id'>): Promise<string> {
   const colRef = collection(db, COLLECTIONS.PROJECTS);
-  const docRef = await addDoc(colRef, {
+  const clean = sanitizeForFirestore({
     ...item,
-    createdAt: new Date().toISOString()
+    order: (item as any).order ?? Date.now(),
+    createdAt: (item as any).createdAt || new Date().toISOString()
   });
+  const docRef = await addDoc(colRef, clean);
   return docRef.id;
 }
 
 export async function updateProject(id: string, item: Partial<Project>): Promise<void> {
   const docRef = doc(db, COLLECTIONS.PROJECTS, id);
-  await updateDoc(docRef, item);
+  const clean = sanitizeForFirestore(item);
+  delete (clean as any).id;
+  await setDoc(docRef, clean, { merge: true });
 }
 
 export async function deleteProject(id: string): Promise<void> {
@@ -235,9 +273,9 @@ export async function deleteProject(id: string): Promise<void> {
 // CREATIONS
 // ---------------------------------------------
 export function subscribeCreations(callback: (items: Creation[]) => void) {
-  const q = query(collection(db, COLLECTIONS.CREATIONS), orderBy('order', 'asc'));
+  const colRef = collection(db, COLLECTIONS.CREATIONS);
   return onSnapshot(
-    q,
+    colRef,
     (snap) => {
       if (snap.empty) {
         callback(INITIAL_CREATIONS);
@@ -254,16 +292,20 @@ export function subscribeCreations(callback: (items: Creation[]) => void) {
 
 export async function addCreation(item: Omit<Creation, 'id'>): Promise<string> {
   const colRef = collection(db, COLLECTIONS.CREATIONS);
-  const docRef = await addDoc(colRef, {
+  const clean = sanitizeForFirestore({
     ...item,
-    createdAt: new Date().toISOString()
+    order: (item as any).order ?? Date.now(),
+    createdAt: (item as any).createdAt || new Date().toISOString()
   });
+  const docRef = await addDoc(colRef, clean);
   return docRef.id;
 }
 
 export async function updateCreation(id: string, item: Partial<Creation>): Promise<void> {
   const docRef = doc(db, COLLECTIONS.CREATIONS, id);
-  await updateDoc(docRef, item);
+  const clean = sanitizeForFirestore(item);
+  delete (clean as any).id;
+  await setDoc(docRef, clean, { merge: true });
 }
 
 export async function deleteCreation(id: string): Promise<void> {
@@ -275,9 +317,9 @@ export async function deleteCreation(id: string): Promise<void> {
 // GALLERY
 // ---------------------------------------------
 export function subscribeGallery(callback: (items: GalleryItem[]) => void) {
-  const q = query(collection(db, COLLECTIONS.GALLERY), orderBy('order', 'asc'));
+  const colRef = collection(db, COLLECTIONS.GALLERY);
   return onSnapshot(
-    q,
+    colRef,
     (snap) => {
       if (snap.empty) {
         callback(INITIAL_GALLERY);
@@ -294,16 +336,20 @@ export function subscribeGallery(callback: (items: GalleryItem[]) => void) {
 
 export async function addGalleryItem(item: Omit<GalleryItem, 'id'>): Promise<string> {
   const colRef = collection(db, COLLECTIONS.GALLERY);
-  const docRef = await addDoc(colRef, {
+  const clean = sanitizeForFirestore({
     ...item,
-    createdAt: new Date().toISOString()
+    order: (item as any).order ?? Date.now(),
+    createdAt: (item as any).createdAt || new Date().toISOString()
   });
+  const docRef = await addDoc(colRef, clean);
   return docRef.id;
 }
 
 export async function updateGalleryItem(id: string, item: Partial<GalleryItem>): Promise<void> {
   const docRef = doc(db, COLLECTIONS.GALLERY, id);
-  await updateDoc(docRef, item);
+  const clean = sanitizeForFirestore(item);
+  delete (clean as any).id;
+  await setDoc(docRef, clean, { merge: true });
 }
 
 export async function deleteGalleryItem(id: string): Promise<void> {
@@ -315,9 +361,9 @@ export async function deleteGalleryItem(id: string): Promise<void> {
 // VIDEOS
 // ---------------------------------------------
 export function subscribeVideos(callback: (items: VideoItem[]) => void) {
-  const q = query(collection(db, COLLECTIONS.VIDEOS), orderBy('order', 'asc'));
+  const colRef = collection(db, COLLECTIONS.VIDEOS);
   return onSnapshot(
-    q,
+    colRef,
     (snap) => {
       if (snap.empty) {
         callback(INITIAL_VIDEOS);
@@ -334,16 +380,20 @@ export function subscribeVideos(callback: (items: VideoItem[]) => void) {
 
 export async function addVideo(item: Omit<VideoItem, 'id'>): Promise<string> {
   const colRef = collection(db, COLLECTIONS.VIDEOS);
-  const docRef = await addDoc(colRef, {
+  const clean = sanitizeForFirestore({
     ...item,
-    createdAt: new Date().toISOString()
+    order: (item as any).order ?? Date.now(),
+    createdAt: (item as any).createdAt || new Date().toISOString()
   });
+  const docRef = await addDoc(colRef, clean);
   return docRef.id;
 }
 
 export async function updateVideo(id: string, item: Partial<VideoItem>): Promise<void> {
   const docRef = doc(db, COLLECTIONS.VIDEOS, id);
-  await updateDoc(docRef, item);
+  const clean = sanitizeForFirestore(item);
+  delete (clean as any).id;
+  await setDoc(docRef, clean, { merge: true });
 }
 
 export async function deleteVideo(id: string): Promise<void> {
@@ -374,16 +424,20 @@ export function subscribeFavorites(callback: (items: FavoriteItem[]) => void) {
 
 export async function addFavorite(item: Omit<FavoriteItem, 'id'>): Promise<string> {
   const colRef = collection(db, COLLECTIONS.FAVORITES);
-  const docRef = await addDoc(colRef, {
+  const clean = sanitizeForFirestore({
     ...item,
-    createdAt: new Date().toISOString()
+    order: (item as any).order ?? Date.now(),
+    createdAt: (item as any).createdAt || new Date().toISOString()
   });
+  const docRef = await addDoc(colRef, clean);
   return docRef.id;
 }
 
 export async function updateFavorite(id: string, item: Partial<FavoriteItem>): Promise<void> {
   const docRef = doc(db, COLLECTIONS.FAVORITES, id);
-  await updateDoc(docRef, item);
+  const clean = sanitizeForFirestore(item);
+  delete (clean as any).id;
+  await setDoc(docRef, clean, { merge: true });
 }
 
 export async function deleteFavorite(id: string): Promise<void> {
@@ -420,7 +474,6 @@ export async function getBlogPostByIdOrSlug(idOrSlug: string): Promise<BlogPost 
     if (snap.exists()) {
       return { id: snap.id, ...snap.data() } as BlogPost;
     }
-    // Search in initial list
     const found = INITIAL_BLOG_POSTS.find(p => p.id === idOrSlug || p.slug === idOrSlug);
     return found || null;
   } catch (error) {
@@ -430,16 +483,20 @@ export async function getBlogPostByIdOrSlug(idOrSlug: string): Promise<BlogPost 
 
 export async function addBlogPost(item: Omit<BlogPost, 'id'>): Promise<string> {
   const colRef = collection(db, COLLECTIONS.BLOG_POSTS);
-  const docRef = await addDoc(colRef, {
+  const clean = sanitizeForFirestore({
     ...item,
-    createdAt: new Date().toISOString()
+    order: (item as any).order ?? Date.now(),
+    createdAt: (item as any).createdAt || new Date().toISOString()
   });
+  const docRef = await addDoc(colRef, clean);
   return docRef.id;
 }
 
 export async function updateBlogPost(id: string, item: Partial<BlogPost>): Promise<void> {
   const docRef = doc(db, COLLECTIONS.BLOG_POSTS, id);
-  await updateDoc(docRef, item);
+  const clean = sanitizeForFirestore(item);
+  delete (clean as any).id;
+  await setDoc(docRef, clean, { merge: true });
 }
 
 export async function deleteBlogPost(id: string): Promise<void> {
@@ -451,9 +508,9 @@ export async function deleteBlogPost(id: string): Promise<void> {
 // ACHIEVEMENTS
 // ---------------------------------------------
 export function subscribeAchievements(callback: (items: Achievement[]) => void) {
-  const q = query(collection(db, COLLECTIONS.ACHIEVEMENTS), orderBy('order', 'asc'));
+  const colRef = collection(db, COLLECTIONS.ACHIEVEMENTS);
   return onSnapshot(
-    q,
+    colRef,
     (snap) => {
       if (snap.empty) {
         callback(INITIAL_ACHIEVEMENTS);
@@ -470,16 +527,20 @@ export function subscribeAchievements(callback: (items: Achievement[]) => void) 
 
 export async function addAchievement(item: Omit<Achievement, 'id'>): Promise<string> {
   const colRef = collection(db, COLLECTIONS.ACHIEVEMENTS);
-  const docRef = await addDoc(colRef, {
+  const clean = sanitizeForFirestore({
     ...item,
-    createdAt: new Date().toISOString()
+    order: (item as any).order ?? Date.now(),
+    createdAt: (item as any).createdAt || new Date().toISOString()
   });
+  const docRef = await addDoc(colRef, clean);
   return docRef.id;
 }
 
 export async function updateAchievement(id: string, item: Partial<Achievement>): Promise<void> {
   const docRef = doc(db, COLLECTIONS.ACHIEVEMENTS, id);
-  await updateDoc(docRef, item);
+  const clean = sanitizeForFirestore(item);
+  delete (clean as any).id;
+  await setDoc(docRef, clean, { merge: true });
 }
 
 export async function deleteAchievement(id: string): Promise<void> {
@@ -491,9 +552,9 @@ export async function deleteAchievement(id: string): Promise<void> {
 // FUTURE GOALS
 // ---------------------------------------------
 export function subscribeFutureGoals(callback: (items: FutureGoal[]) => void) {
-  const q = query(collection(db, COLLECTIONS.FUTURE_GOALS), orderBy('order', 'asc'));
+  const colRef = collection(db, COLLECTIONS.FUTURE_GOALS);
   return onSnapshot(
-    q,
+    colRef,
     (snap) => {
       if (snap.empty) {
         callback(INITIAL_FUTURE_GOALS);
@@ -510,16 +571,20 @@ export function subscribeFutureGoals(callback: (items: FutureGoal[]) => void) {
 
 export async function addFutureGoal(item: Omit<FutureGoal, 'id'>): Promise<string> {
   const colRef = collection(db, COLLECTIONS.FUTURE_GOALS);
-  const docRef = await addDoc(colRef, {
+  const clean = sanitizeForFirestore({
     ...item,
-    createdAt: new Date().toISOString()
+    order: (item as any).order ?? Date.now(),
+    createdAt: (item as any).createdAt || new Date().toISOString()
   });
+  const docRef = await addDoc(colRef, clean);
   return docRef.id;
 }
 
 export async function updateFutureGoal(id: string, item: Partial<FutureGoal>): Promise<void> {
   const docRef = doc(db, COLLECTIONS.FUTURE_GOALS, id);
-  await updateDoc(docRef, item);
+  const clean = sanitizeForFirestore(item);
+  delete (clean as any).id;
+  await setDoc(docRef, clean, { merge: true });
 }
 
 export async function deleteFutureGoal(id: string): Promise<void> {
@@ -532,11 +597,12 @@ export async function deleteFutureGoal(id: string): Promise<void> {
 // ---------------------------------------------
 export async function sendContactMessage(msg: Omit<ContactMessage, 'id' | 'createdAt' | 'read'>): Promise<string> {
   const colRef = collection(db, COLLECTIONS.CONTACT_MESSAGES);
-  const docRef = await addDoc(colRef, {
+  const clean = sanitizeForFirestore({
     ...msg,
     createdAt: new Date().toISOString(),
     read: false,
   });
+  const docRef = await addDoc(colRef, clean);
   return docRef.id;
 }
 
@@ -601,7 +667,8 @@ export function subscribeSiteSettings(callback: (settings: SiteSettings) => void
 
 export async function updateSiteSettings(settings: Partial<SiteSettings>): Promise<void> {
   const docRef = doc(db, COLLECTIONS.SETTINGS, 'general');
-  await setDoc(docRef, settings, { merge: true });
+  const clean = sanitizeForFirestore(settings);
+  await setDoc(docRef, clean, { merge: true });
 }
 
 // ---------------------------------------------
@@ -613,70 +680,70 @@ export async function seedAllDataToFirestore(): Promise<void> {
 
     // Profile
     const profileRef = doc(db, COLLECTIONS.PROFILE, 'main');
-    batch.set(profileRef, INITIAL_PROFILE);
+    batch.set(profileRef, sanitizeForFirestore(INITIAL_PROFILE));
 
     // Settings
     const settingsRef = doc(db, COLLECTIONS.SETTINGS, 'general');
-    batch.set(settingsRef, INITIAL_SETTINGS);
+    batch.set(settingsRef, sanitizeForFirestore(INITIAL_SETTINGS));
 
     // Life story
     for (const item of INITIAL_LIFE_STORY) {
       const itemRef = doc(db, COLLECTIONS.LIFE_STORY, item.id);
-      batch.set(itemRef, item);
+      batch.set(itemRef, sanitizeForFirestore(item));
     }
 
     // Education
     for (const item of INITIAL_EDUCATION) {
       const itemRef = doc(db, COLLECTIONS.EDUCATION, item.id);
-      batch.set(itemRef, item);
+      batch.set(itemRef, sanitizeForFirestore(item));
     }
 
     // Projects
     for (const item of INITIAL_PROJECTS) {
       const itemRef = doc(db, COLLECTIONS.PROJECTS, item.id);
-      batch.set(itemRef, item);
+      batch.set(itemRef, sanitizeForFirestore(item));
     }
 
     // Creations
     for (const item of INITIAL_CREATIONS) {
       const itemRef = doc(db, COLLECTIONS.CREATIONS, item.id);
-      batch.set(itemRef, item);
+      batch.set(itemRef, sanitizeForFirestore(item));
     }
 
     // Gallery
     for (const item of INITIAL_GALLERY) {
       const itemRef = doc(db, COLLECTIONS.GALLERY, item.id);
-      batch.set(itemRef, item);
+      batch.set(itemRef, sanitizeForFirestore(item));
     }
 
     // Videos
     for (const item of INITIAL_VIDEOS) {
       const itemRef = doc(db, COLLECTIONS.VIDEOS, item.id);
-      batch.set(itemRef, item);
+      batch.set(itemRef, sanitizeForFirestore(item));
     }
 
     // Favorites
     for (const item of INITIAL_FAVORITES) {
       const itemRef = doc(db, COLLECTIONS.FAVORITES, item.id);
-      batch.set(itemRef, item);
+      batch.set(itemRef, sanitizeForFirestore(item));
     }
 
     // Blog posts
     for (const item of INITIAL_BLOG_POSTS) {
       const itemRef = doc(db, COLLECTIONS.BLOG_POSTS, item.id);
-      batch.set(itemRef, item);
+      batch.set(itemRef, sanitizeForFirestore(item));
     }
 
     // Achievements
     for (const item of INITIAL_ACHIEVEMENTS) {
       const itemRef = doc(db, COLLECTIONS.ACHIEVEMENTS, item.id);
-      batch.set(itemRef, item);
+      batch.set(itemRef, sanitizeForFirestore(item));
     }
 
     // Future goals
     for (const item of INITIAL_FUTURE_GOALS) {
       const itemRef = doc(db, COLLECTIONS.FUTURE_GOALS, item.id);
-      batch.set(itemRef, item);
+      batch.set(itemRef, sanitizeForFirestore(item));
     }
 
     await batch.commit();
@@ -712,17 +779,27 @@ const collectionKeyMap: Record<string, string> = {
 export async function addGenericDocument(collectionKey: string, data: any): Promise<string> {
   const colName = collectionKeyMap[collectionKey] || collectionKey;
   const colRef = collection(db, colName);
-  const docRef = await addDoc(colRef, {
+  
+  const cleanData = sanitizeForFirestore({
     ...data,
+    order: data.order !== undefined ? data.order : Date.now(),
     createdAt: data.createdAt || new Date().toISOString()
   });
+  delete cleanData.id;
+
+  const docRef = await addDoc(colRef, cleanData);
   return docRef.id;
 }
 
 export async function updateGenericDocument(collectionKey: string, id: string, data: any): Promise<void> {
   const colName = collectionKeyMap[collectionKey] || collectionKey;
   const docRef = doc(db, colName, id);
-  await updateDoc(docRef, data);
+  const cleanData = sanitizeForFirestore({
+    ...data,
+    updatedAt: new Date().toISOString()
+  });
+  delete cleanData.id;
+  await setDoc(docRef, cleanData, { merge: true });
 }
 
 export async function deleteGenericDocument(collectionKey: string, id: string): Promise<void> {

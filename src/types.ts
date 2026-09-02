@@ -294,6 +294,8 @@ export interface ContactMessage {
   read?: boolean;
 }
 
+export const MASTER_ADMIN_EMAIL = 'mdismail2468101214@gmail.com';
+
 export interface SiteSettings {
   siteTitle: string;
   siteSubtitle: string;
@@ -301,4 +303,5 @@ export interface SiteSettings {
   footerQuote: string;
   footerQuoteBn: string;
   showVisitorStats: boolean;
+  authorizedAdmins?: string[];
 }

@@ -10,10 +10,12 @@ import {
   KeyRound,
   ArrowLeft,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  ShieldCheck
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { MASTER_ADMIN_EMAIL } from '../../types';
 
 interface AdminLoginPageProps {
   onNavigate: (route: string) => void;
@@ -21,7 +23,7 @@ interface AdminLoginPageProps {
 }
 
 export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onNavigate, showToast }) => {
-  const { login, signup, loginWithGoogle, resetPassword, setGuestAdminMode, isAdmin } = useAuth();
+  const { login, signup, loginWithGoogle, resetPassword, isAdmin } = useAuth();
   const { t } = useLanguage();
 
   const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>('login');
@@ -34,7 +36,7 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onNavigate, show
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // If already logged in, navigate straight to dashboard
+  // If already logged in as authorized admin, navigate straight to dashboard
   if (isAdmin) {
     onNavigate('admin-dashboard');
     return null;
@@ -89,10 +91,10 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onNavigate, show
       setLoading(true);
       try {
         await signup(cleanEmail, password);
-        showToast(t('নতুন অ্যাডমিন অ্যাকাউন্ট তৈরি ও লগইন সফল হয়েছে!', 'Admin account created and logged in!'), 'success');
+        showToast(t('অ্যাডমিন অ্যাকাউন্ট তৈরি ও লগইন সফল হয়েছে!', 'Admin account created and logged in!'), 'success');
         onNavigate('admin-dashboard');
       } catch (err: any) {
-        setError(err.message || 'Signup failed. Please try again.');
+        setError(err.message || 'Signup failed. Only authorized emails can register.');
         showToast(t('অ্যাকাউন্ট তৈরি ব্যর্থ হয়েছে।', 'Signup failed.'), 'error');
       } finally {
         setLoading(false);
@@ -108,7 +110,7 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onNavigate, show
       onNavigate('admin-dashboard');
     } catch (err: any) {
       setError(err.message || 'Login failed. Please check credentials.');
-      showToast(t('লগইন ব্যর্থ হয়েছে। তথ্য যাচাই করুন।', 'Login failed.'), 'error');
+      showToast(t('লগইন ব্যর্থ হয়েছে।', 'Login failed.'), 'error');
     } finally {
       setLoading(false);
     }
@@ -129,8 +131,8 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onNavigate, show
     }
   };
 
-  const handleFillDemo = () => {
-    setEmail('mdismail2468101214@gmail.com');
+  const handleFillAdminEmail = () => {
+    setEmail(MASTER_ADMIN_EMAIL);
     setPassword('admin123456');
     setConfirmPassword('admin123456');
   };
@@ -149,8 +151,9 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onNavigate, show
             <span>{t('ওয়েবসাইটে ফিরুন', 'Back to website')}</span>
           </button>
 
-          <span className="text-[11px] px-2.5 py-0.5 rounded-full font-medium bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/50 dark:border-emerald-800/50">
-            {t('সিকিউর অ্যাডমিন পোর্টাল', 'Admin Control')}
+          <span className="text-[11px] px-2.5 py-0.5 rounded-full font-medium bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/50 dark:border-emerald-800/50 flex items-center gap-1">
+            <ShieldCheck className="w-3 h-3" />
+            <span>{t('মালিকের সংরক্ষিত পোর্টাল', 'Owner Only Portal')}</span>
           </span>
         </div>
 
@@ -160,12 +163,12 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onNavigate, show
           </div>
           <h1 className="text-2xl font-bold text-stone-900 dark:text-white font-sans">
             {mode === 'login' && t('অ্যাডমিন লগইন', 'Admin Portal Login')}
-            {mode === 'signup' && t('নতুন অ্যাডমিন অ্যাকাউন্ট তৈরি', 'Create Admin Account')}
+            {mode === 'signup' && t('অ্যাডমিন পাসওয়ার্ড সেট / তৈরি', 'Set Admin Password')}
             {mode === 'forgot' && t('পাসওয়ার্ড রিসেট', 'Reset Password')}
           </h1>
-          <p className="text-xs text-stone-500 dark:text-stone-400">
-            {mode === 'login' && t('ওয়েবসাইটের কনটেন্ট পরিচালনা ও সম্পাদনা করতে প্রবেশ করুন', 'Sign in to manage and edit portfolio content')}
-            {mode === 'signup' && t('প্রথমবার প্রবেশ করতে আপনার অ্যাডমিন ইমেইল ও পাসওয়ার্ড সেট করুন', 'Set your admin email and password for the first time')}
+          <p className="text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
+            {mode === 'login' && t('শুধুমাত্র অনুমোদিত অ্যাডমিন (মুহাম্মদ ইসমাইল) প্রবেশ করতে পারবেন', 'Only authorized admins can access this dashboard')}
+            {mode === 'signup' && t('অনুমোদিত অ্যাডমিন ইমেইলের জন্য পাসওয়ার্ড তৈরি করুন', 'Create or register password for authorized admin email')}
             {mode === 'forgot' && t('আপনার ইমেইলে পাসওয়ার্ড রিসেট লিঙ্ক পাঠানো হবে', 'We will send a password reset link to your email')}
           </p>
         </div>
@@ -200,7 +203,7 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onNavigate, show
                 : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white'
             }`}
           >
-            {t('নতুন অ্যাকাউন্ট', 'Register')}
+            {t('পাসওয়ার্ড সেট', 'Set Password')}
           </button>
           <button
             type="button"
@@ -224,20 +227,8 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onNavigate, show
           <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800/80 text-rose-700 dark:text-rose-300 text-xs space-y-2">
             <div className="flex items-start gap-2">
               <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-              <span>{error}</span>
+              <span className="leading-relaxed">{error}</span>
             </div>
-            {mode === 'login' && error.includes('অ্যাকাউন্ট পাওয়া যায়নি') && (
-              <button
-                type="button"
-                onClick={() => {
-                  setMode('signup');
-                  setError(null);
-                }}
-                className="font-semibold text-emerald-700 dark:text-emerald-400 underline block pt-1"
-              >
-                {t('👉 এই ইমেইল দিয়ে এখনই নতুন অ্যাডমিন অ্যাকাউন্ট তৈরি করুন', '👉 Register this email as Admin now')}
-              </button>
-            )}
           </div>
         )}
 
@@ -382,7 +373,7 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onNavigate, show
               </>
             ) : mode === 'signup' ? (
               <>
-                <span>{t('অ্যাকাউন্ট তৈরি ও লগইন', 'Create Account & Sign In')}</span>
+                <span>{t('পাসওয়ার্ড সেট করুন', 'Set Password')}</span>
                 <UserPlus className="w-4 h-4" />
               </>
             ) : (
@@ -394,34 +385,23 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onNavigate, show
           </button>
         </form>
 
-        {/* Quick Helper for Admin Setup */}
+        {/* Quick Helper for Admin Credential filling */}
         <div className="pt-3 border-t border-stone-100 dark:border-stone-800 text-center space-y-2.5">
-          <div className="flex flex-col sm:flex-row gap-2 items-center justify-center">
+          <div className="flex items-center justify-center">
             <button
               type="button"
-              onClick={handleFillDemo}
-              className="w-full sm:w-auto px-3 py-1.5 text-xs rounded-xl bg-stone-100 dark:bg-stone-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-stone-700 font-medium transition-colors border border-stone-200 dark:border-stone-700"
+              onClick={handleFillAdminEmail}
+              className="px-3.5 py-1.5 text-xs rounded-xl bg-stone-100 dark:bg-stone-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-stone-700 font-medium transition-colors border border-stone-200 dark:border-stone-700"
             >
-              {t('আমার ইমেইল ও পাসওয়ার্ড বসান ⚡', 'Fill Email & Password ⚡')}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setGuestAdminMode(true);
-                showToast(t('অ্যাডমিন ড্যাশবোর্ডে প্রবেশ করা হয়েছে', 'Admin Dashboard opened'), 'success');
-                onNavigate('admin-dashboard');
-              }}
-              className="w-full sm:w-auto px-3 py-1.5 text-xs rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 font-semibold transition-colors border border-emerald-300/60 dark:border-emerald-800 flex items-center justify-center gap-1.5"
-            >
-              <Eye className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-              <span>{t('সরাসরি ড্যাশবোর্ড দেখুন →', 'Directly View Dashboard →')}</span>
+              {t('আমার ইমেইল ও পাসওয়ার্ড বসান ⚡', 'Fill Admin Credentials ⚡')}
             </button>
           </div>
-          <p className="text-[11px] text-stone-400 dark:text-stone-500">
-            {t('ড্যাশবোর্ডে প্রবেশ করে যেকোনো তথ্য, প্রজেক্ট ও ছবি সরাসরি পরিবর্তন করা যাবে', 'Enter dashboard to directly edit any content, projects & photos')}
+          <p className="text-[11px] text-stone-400 dark:text-stone-500 leading-relaxed">
+            {t('নিরাপত্তার স্বার্থে শুধুমাত্র মালিক (মুহাম্মদ ইসমাইল) ও অনুমতিপ্রাপ্ত ইমেইলসমূহ এই প্যানেলে প্রবেশ করতে পারে।', 'For security, only the site owner and authorized admins can access this dashboard.')}
           </p>
         </div>
       </div>
     </div>
   );
 };
+

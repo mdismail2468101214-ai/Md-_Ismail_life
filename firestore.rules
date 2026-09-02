@@ -1,57 +1,83 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Portfolio Collections
+    
+    // Helper function to check if the user is authenticated and is an authorized admin
+    function isAdmin() {
+      return request.auth != null && (
+        request.auth.token.email.lower() == 'mdismail2468101214@gmail.com' ||
+        (
+          exists(/databases/$(database)/documents/settings/general) &&
+          request.auth.token.email.lower() in get(/databases/$(database)/documents/settings/general).data.authorizedAdmins
+        )
+      );
+    }
+
+    // Public read collections, write restricted to authorized admins
     match /profile/{docId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     match /life_story/{docId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     match /education/{docId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     match /projects/{docId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     match /creations/{docId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     match /gallery/{docId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     match /videos/{docId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     match /favorites/{docId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     match /blog_posts/{docId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     match /achievements/{docId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     match /future_goals/{docId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     match /settings/{docId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
+    // Contact messages: anyone can submit a message (create), only admins can read, update, or delete
     match /contact_messages/{docId} {
-      allow read, write: if true;
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
     }
   }
 }

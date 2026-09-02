@@ -754,5 +754,6 @@ export const INITIAL_SETTINGS: SiteSettings = {
   allowPublicContact: true,
   footerQuote: '“And say: My Lord, increase me in knowledge.” (Quran 20:114)',
   footerQuoteBn: '“এবং বলুন: হে আমার পালনকর্তা, আমার জ্ঞান বৃদ্ধি করে দিন।” (সূরা ত্বা-হা: ১১৪)',
-  showVisitorStats: true
+  showVisitorStats: true,
+  authorizedAdmins: ['mdismail2468101214@gmail.com']
 };

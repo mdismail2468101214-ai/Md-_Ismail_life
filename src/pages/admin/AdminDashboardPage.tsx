@@ -23,7 +23,11 @@ import {
   Eye,
   ArrowLeft,
   Search,
-  CheckCircle2
+  CheckCircle2,
+  Database,
+  RefreshCw,
+  ShieldCheck,
+  UserPlus
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
@@ -40,7 +44,8 @@ import {
   BlogPost,
   Achievement,
   FutureGoal,
-  ContactMessage
+  ContactMessage,
+  MASTER_ADMIN_EMAIL
 } from '../../types';
 
 interface AdminDashboardPageProps {
@@ -68,11 +73,14 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
     updateSettings,
     addDocument,
     updateDocument,
-    deleteDocument
+    deleteDocument,
+    seedSampleData
   } = useData();
   const { t } = useLanguage();
 
   const [activeTab, setActiveTab] = useState<string>('overview');
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSeeding, setIsSeeding] = useState(false);
 
   // Confirmation Dialog State
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -89,6 +97,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
   // Profile Form State
   const [profileForm, setProfileForm] = useState(profile);
   const [settingsForm, setSettingsForm] = useState(settings);
+  const [newAdminEmail, setNewAdminEmail] = useState('');
 
   // If not admin, redirect to login
   if (!isAdmin) {
@@ -246,17 +255,49 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
 
   const handleSaveEditor = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSaving(true);
     try {
-      if (isEditing && editorData.id) {
-        await updateDocument(editorCollection, editorData.id, editorData);
+      const dataToSave = { ...editorData };
+
+      // Normalization and fallback
+      if (!dataToSave.title && dataToSave.titleBn) dataToSave.title = dataToSave.titleBn;
+      if (!dataToSave.titleBn && dataToSave.title) dataToSave.titleBn = dataToSave.title;
+      if (!dataToSave.institution && dataToSave.institutionBn) dataToSave.institution = dataToSave.institutionBn;
+      if (!dataToSave.institutionBn && dataToSave.institution) dataToSave.institutionBn = dataToSave.institution;
+      if (!dataToSave.description && dataToSave.descriptionBn) dataToSave.description = dataToSave.descriptionBn;
+      if (!dataToSave.descriptionBn && dataToSave.description) dataToSave.descriptionBn = dataToSave.description;
+      if (editorCollection === 'blogs' && !dataToSave.slug) {
+        dataToSave.slug = ((dataToSave.title || dataToSave.titleBn || 'post')
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-') + '-' + Date.now()).replace(/^-+|-+$/g, '');
+      }
+
+      if (isEditing && dataToSave.id) {
+        await updateDocument(editorCollection, dataToSave.id, dataToSave);
         showToast(t('সফলভাবে আপডেট করা হয়েছে!', 'Item updated successfully!'), 'success');
       } else {
-        await addDocument(editorCollection, editorData);
+        await addDocument(editorCollection, dataToSave);
         showToast(t('সফলভাবে যোগ করা হয়েছে!', 'Item added successfully!'), 'success');
       }
       setEditorOpen(false);
-    } catch (err) {
-      showToast(t('সংরক্ষণে সমস্যা হয়েছে।', 'Failed to save item.'), 'error');
+    } catch (err: any) {
+      console.error('Save error in handleSaveEditor:', err);
+      showToast(t(`সংরক্ষণে সমস্যা হয়েছে: ${err.message || 'Error'}`, `Failed to save: ${err.message || 'Error'}`), 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSeedDatabase = async () => {
+    setIsSeeding(true);
+    try {
+      await seedSampleData();
+      showToast(t('ক্লাউড ডাটাবেসে সফলভাবে সকল তথ্য সংরক্ষিত হয়েছে!', 'All sample data synced to cloud database!'), 'success');
+    } catch (err: any) {
+      console.error('Seed error:', err);
+      showToast(t('ডাটাবেসে তথ্য সংরক্ষণে ত্রুটি দেখা দিয়েছে', 'Failed to seed database'), 'error');
+    } finally {
+      setIsSeeding(false);
     }
   };
 
@@ -288,6 +329,54 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
       showToast(t('সাইট সেটিংস সংরক্ষিত হয়েছে!', 'Settings updated successfully!'), 'success');
     } catch (err) {
       showToast(t('সেটিংস আপডেট ব্যর্থ হয়েছে', 'Settings update failed'), 'error');
+    }
+  };
+
+  const currentAuthorizedAdmins = Array.from(
+    new Set([
+      MASTER_ADMIN_EMAIL.toLowerCase(),
+      ...(settingsForm.authorizedAdmins || []).map((e) => e.trim().toLowerCase())
+    ])
+  );
+
+  const handleAddAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const clean = newAdminEmail.trim().toLowerCase();
+    if (!clean || !clean.includes('@')) {
+      showToast(t('সঠিক ইমেইল অ্যাড্রেস লিখুন', 'Enter a valid email address'), 'error');
+      return;
+    }
+    if (currentAuthorizedAdmins.includes(clean)) {
+      showToast(t('এই ইমেইল ইতিমধ্যে অনুমোদিত তালিকায় আছে', 'This email is already authorized'), 'info');
+      setNewAdminEmail('');
+      return;
+    }
+    const updated = [...currentAuthorizedAdmins, clean];
+    const newSettings = { ...settingsForm, authorizedAdmins: updated };
+    setSettingsForm(newSettings);
+    setNewAdminEmail('');
+    try {
+      await updateSettings(newSettings);
+      showToast(t(`"${clean}" কে অ্যাডমিন হিসেবে অনুমতি দেওয়া হয়েছে!`, `Admin access granted to "${clean}"!`), 'success');
+    } catch (err) {
+      showToast(t('অনুমতি সংরক্ষণে সমস্যা হয়েছে', 'Failed to save admin permission'), 'error');
+    }
+  };
+
+  const handleRemoveAdmin = async (targetEmail: string) => {
+    const clean = targetEmail.trim().toLowerCase();
+    if (clean === MASTER_ADMIN_EMAIL.toLowerCase()) {
+      showToast(t('প্রধান অ্যাডমিন (মালিক) এর অনুমতি বাতিল করা সম্ভব নয়', 'Master Admin (Owner) cannot be removed'), 'error');
+      return;
+    }
+    const updated = currentAuthorizedAdmins.filter((e) => e !== clean);
+    const newSettings = { ...settingsForm, authorizedAdmins: updated };
+    setSettingsForm(newSettings);
+    try {
+      await updateSettings(newSettings);
+      showToast(t(`"${clean}" এর অ্যাডমিন অনুমতি প্রত্যাহার করা হয়েছে।`, `Admin access revoked for "${clean}".`), 'info');
+    } catch (err) {
+      showToast(t('আপডেট ব্যর্থ হয়েছে', 'Failed to update'), 'error');
     }
   };
 
@@ -427,6 +516,29 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Database Cloud Sync Panel */}
+          <div className="p-6 rounded-3xl bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border border-emerald-200 dark:border-emerald-800/60 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Database className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <h4 className="font-bold text-sm text-stone-900 dark:text-white">
+                  {t('ক্লাউড ডাটাবেস ব্যাকআপ ও প্রাথমিক ডাটা সিঙ্ক', 'Cloud Database Sync & Initial Data')}
+                </h4>
+              </div>
+              <p className="text-xs text-stone-600 dark:text-stone-400">
+                {t('সমস্ত প্রাথমিক প্রজেক্ট, ব্লগ, শিক্ষা ও অর্জন সরাসরি ফায়ারবেস ক্লাউড ডাটাবেসে সেভ করতে ক্লিক করুন।', 'Sync all portfolio initial projects, stories, and blogs directly to the Firebase Cloud Firestore database.')}
+              </p>
+            </div>
+            <button
+              onClick={handleSeedDatabase}
+              disabled={isSeeding}
+              className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-2 transition-all whitespace-nowrap shadow-xs disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isSeeding ? 'animate-spin' : ''}`} />
+              <span>{isSeeding ? t('সিঙ্ক হচ্ছে...', 'Syncing...') : t('ডাটাবেসে সিঙ্ক করুন', 'Sync to Cloud Database')}</span>
+            </button>
           </div>
         </div>
       )}
@@ -783,6 +895,93 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
               />
             </div>
           </div>
+
+          {/* Admin Access & Permission Security Management */}
+          <div className="pt-6 border-t border-stone-200 dark:border-stone-800 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-stone-900 dark:text-white flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                  <span>{t('অ্যাডমিন অ্যাক্সেস ও অনুমতি ব্যবস্থাপনা', 'Admin Access & Permissions')}</span>
+                </h3>
+                <p className="text-xs text-stone-500 dark:text-stone-400">
+                  {t(
+                    'শুধুমাত্র তালিকাভুক্ত ইমেইলসমূহ অ্যাডমিন প্যানেলে লগইন করতে পারে। আপনি নতুন কাউকে অনুমতি দিতে বা অনুমতি বাতিল করতে পারেন।',
+                    'Only whitelisted emails can log in as Admin. You can grant or revoke access anytime.'
+                  )}
+                </p>
+              </div>
+            </div>
+
+            {/* List of authorized admins */}
+            <div className="space-y-2">
+              {currentAuthorizedAdmins.map((admEmail, aIdx) => {
+                const isMaster = admEmail.toLowerCase() === MASTER_ADMIN_EMAIL.toLowerCase();
+                return (
+                  <div
+                    key={aIdx}
+                    className="p-3.5 rounded-2xl bg-stone-50 dark:bg-stone-800/60 border border-stone-200 dark:border-stone-700/60 flex items-center justify-between gap-3"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-600/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                        <ShieldCheck className="w-4 h-4" />
+                      </div>
+                      <div className="truncate">
+                        <p className="text-xs sm:text-sm font-semibold text-stone-900 dark:text-white truncate">
+                          {admEmail}
+                        </p>
+                        <p className="text-[11px] text-stone-400">
+                          {isMaster
+                            ? t('প্রধান মালিক ও সুপার অ্যাডমিন (স্থায়ী)', 'Owner & Super Admin (Permanent)')
+                            : t('অনুমতিপ্রাপ্ত সহকারী অ্যাডমিন', 'Authorized Admin')}
+                        </p>
+                      </div>
+                    </div>
+
+                    {isMaster ? (
+                      <span className="px-2.5 py-1 text-[10px] font-bold rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                        {t('মালিক', 'OWNER')}
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveAdmin(admEmail)}
+                        className="px-2.5 py-1 rounded-xl text-xs text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/60 transition-colors flex items-center gap-1 font-medium border border-rose-200 dark:border-rose-900/50"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>{t('অনুমতি বাতিল', 'Revoke')}</span>
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Add New Authorized Admin Form */}
+            <div className="pt-2">
+              <label className="text-xs font-semibold text-stone-700 dark:text-stone-300 block mb-1.5">
+                {t('নতুন কাউকে অ্যাডমিন অনুমতি দিন:', 'Grant Admin Access to a new Email:')}
+              </label>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="email"
+                  placeholder="name@example.com"
+                  value={newAdminEmail}
+                  onChange={(e) => setNewAdminEmail(e.target.value)}
+                  className="flex-1 px-3.5 py-2 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-sm focus:outline-hidden focus:border-emerald-500"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddAdmin}
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs whitespace-nowrap"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  <span>{t('অনুমোদন দিন', 'Grant Access')}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
         </form>
       )}
 
@@ -929,16 +1128,19 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
               <div className="flex justify-end gap-3 pt-4 border-t border-stone-200 dark:border-stone-800">
                 <button
                   type="button"
+                  disabled={isSaving}
                   onClick={() => setEditorOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-stone-100 dark:bg-stone-800 text-xs font-semibold text-stone-700 dark:text-stone-300"
+                  className="px-4 py-2 rounded-xl bg-stone-100 dark:bg-stone-800 text-xs font-semibold text-stone-700 dark:text-stone-300 disabled:opacity-50"
                 >
                   {t('বাতিল', 'Cancel')}
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs"
+                  disabled={isSaving}
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs flex items-center gap-2 disabled:opacity-50"
                 >
-                  {t('সংরক্ষণ করুন', 'Save Changes')}
+                  {isSaving && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                  <span>{isSaving ? t('সংরক্ষণ হচ্ছে...', 'Saving...') : t('সংরক্ষণ করুন', 'Save Changes')}</span>
                 </button>
               </div>
             </form>
